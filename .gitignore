@@ -1,0 +1,7 @@
+env/
+
+public/conversations/*.json
+public/documentos/*.pdf
+public/embeddings/*.pkl
+
+.env
