@@ -1,25 +1,53 @@
-# Langchain Python
+# Proyecto RAG
 
-## App python Setup
+## Configurar proyecto
 
-### Setup environment
+### Inicializar proyecto
+> Versión de python 3.12.11
+
+```
+cd <ruta_donde_guardar>
+
+git clone https://github.com/garycdev/rag_bibliotecas
+
+cd rag_bibliotecas
+```
+
+### Instalar entorno
 ```
 python3 -m venv env
 ```
-### Activate enviroment
+
+### Activar entorno
 ```
 source env/bin/activate
 ```
-### Install modules
+
+### Instalar modulos necesarios (pesa algo de 8gb 😬🙃)
 ```
+# Crear una carpeta temporal para la instalacion de dependencias
+mkdir .tmp
+
+# Usar esa carpeta como cache
+export TMPDIR="$(pwd)/.tmp"
+
+# Instalar las dependencias necesarias
 pip install -r requirements.txt
 ```
 
-## Run
+### Configurar entorno post instalación
 ```
-python load_pdf.py "<document>.pdf"
+cp .env.copy .env
 ```
+> Configurar variables
 
+### Nota
+- La instalación puede tardar
+- Pesa alrededor de 8gb (dependencias para langchain, huggingface y OpenAI)
+
+## Ejecutar con pm2
 ```
-python load_embeddings.py "<context>" <id>
+chmod +x start.sh
+
+pm2 start start.sh --name fastapi-rag
 ```
