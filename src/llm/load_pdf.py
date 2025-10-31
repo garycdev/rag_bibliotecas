@@ -47,7 +47,7 @@ def create_embeddings(pdf_directory, embedding_file):
     #     print(f"An error occurred: {e}")
 
 
-pdf_directory = "./data/documents/"
-embedding_file = "./data/embeddings/embedding_base.pkl"
+pdf_directory = "./public/documentos/"
+embedding_file = "./public/embeddings/embedding_base.pkl"
 
 knowledge_base = create_embeddings(pdf_directory, embedding_file)
