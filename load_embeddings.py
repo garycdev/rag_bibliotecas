@@ -6,6 +6,22 @@ from sentence_transformers import SentenceTransformer
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from dotenv import load_dotenv
+from langchain.prompts import PromptTemplate
+
+prompt_template = """
+Eres un asistente experto y tu tarea es responder preguntas basándote únicamente en la información de los documentos proporcionados.
+
+Si la respuesta no está en los documentos, responde con:
+"No tengo información suficiente en mi base de conocimiento para responder con certeza."
+
+=== CONTEXTO DE DOCUMENTOS ===
+{context}
+
+=== PREGUNTA ===
+{question}
+
+=== RESPUESTA ===
+"""
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -60,10 +76,15 @@ if len(sys.argv) > 2:
                 result = {"error_message": "No documents found for the given query."}
                 sys.exit(json.dumps(result))
 
-            llm = ChatOpenAI(model_name="gpt-3.5-turbo")
-            chain = load_qa_chain(llm, chain_type="stuff")
+            prompt = PromptTemplate(
+                template=prompt_template, input_variables=["context", "question"]
+            )
+
+            llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.2)
+            chain = load_qa_chain(llm, chain_type="map_reduce", prompt=prompt)
 
             response = chain.run(input_documents=docs, question=user_question)
+
             result["response"] = response  # Agregar la respuesta al resultado
             save_conversation(response, user_id)
         except Exception as e:
