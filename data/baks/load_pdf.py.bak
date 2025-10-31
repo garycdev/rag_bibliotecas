@@ -9,7 +9,9 @@ from langchain.vectorstores import FAISS
 def create_embeddings(pdf_directory, embedding_file):
     # try:
     if os.path.exists(embedding_file):
-        os.remove(embedding_file)
+        os.remove(
+            embedding_file
+        )
 
     pdf_files = [f for f in os.listdir(pdf_directory) if f.endswith(".pdf")]
     if not pdf_files:
@@ -45,8 +47,7 @@ def create_embeddings(pdf_directory, embedding_file):
     #     print(f"An error occurred: {e}")
 
 
-def load():
-    pdf_directory = "./data/documents/"
-    embedding_file = "./data/embeddings/embedding_base.pkl"
+pdf_directory = "./public/documentos/"
+embedding_file = "./public/embeddings/embedding_base.pkl"
 
-    knowledge_base = create_embeddings(pdf_directory, embedding_file)
+knowledge_base = create_embeddings(pdf_directory, embedding_file)

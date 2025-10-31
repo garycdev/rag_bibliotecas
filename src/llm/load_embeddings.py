@@ -2,20 +2,32 @@ import sys
 import os
 import json
 import pickle
-
 from sentence_transformers import SentenceTransformer
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
-from data.prompts.chat import prompt_chat_template
+from langchain.embeddings import HuggingFaceEmbeddings
+
+prompt_template = """
+Eres un asistente experto. Responde la pregunta usando la información unicamente de los documentos proporcionados.
+Debes dar una respuesta **detallada y completa**, explicando todos los puntos relevantes en español.
+
+=== CONTEXTO DE DOCUMENTOS ===
+{context}
+
+=== PREGUNTA ===
+{question}
+
+=== RESPUESTA ===
+"""
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def save_conversation(response, user_id):
-    filename = f"public/conversations/conv_{user_id}.json"
+    filename = f"data/outputs/conv_{user_id}.json"
     if os.path.exists(filename):
         with open(filename, "r") as f:
             conversation = json.load(f)
@@ -31,7 +43,7 @@ def save_conversation(response, user_id):
 
 
 def load_conversation(user_id):
-    filename = f"public/conversations/conv_{user_id}.json"
+    filename = f"data/outputs/conv_{user_id}.json"
     if os.path.exists(filename):
         with open(filename, "r") as f:
             conversation = json.load(f)
@@ -40,47 +52,72 @@ def load_conversation(user_id):
         return []
 
 
-if len(sys.argv) > 2:
-    user_question = sys.argv[1]
-    user_id = sys.argv[2]
-
-    embedding_file = "./public/embeddings/embedding_base.pkl"
+def load(user_question, user_id):
+    embedding_file = "./data/embeddings/embedding_base.pkl"
     if not os.path.exists(embedding_file):
-        result = {"error_message": "Embedding file not found"}
-        sys.exit(json.dumps(result))
+        result = {
+            "success": False,
+            "status_code": 404,
+            "message": "Base de conocimientos vacia.",
+            "error": "Embedding file not found.",
+        }
+        return result
 
     with open(embedding_file, "rb") as f:
         knowledge_base = pickle.load(f)
 
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    knowledge_base.embedding_function = embedding_model
+
     # Mensaje de embeddings cargados
-    result = {"status": "success", "message": "Embeddings loaded successfully"}
+    result = {
+        "success": True,
+        "status_code": 200,
+        "message": "Información obtenida de la base de conocimientos.",
+        "response": "",
+    }
 
     if knowledge_base:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
         try:
             docs = knowledge_base.similarity_search(user_question, 3)
             if not docs:
-                result = {"error_message": "No documents found for the given query."}
-                sys.exit(json.dumps(result))
+                result = {
+                    "success": False,
+                    "status_code": 404,
+                    "message": "Sin documentos en la base de conocimientos.",
+                    "error": "No documents found for the given query.",
+                }
+                return result
 
             prompt = PromptTemplate(
-                template=prompt_chat_template, input_variables=["context", "question"]
+                template=prompt_template, input_variables=["context", "question"]
             )
 
-            llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.2)
-            chain = load_qa_chain(llm, chain_type="map_reduce", prompt=prompt)
+            llm = ChatOpenAI(
+                model_name="gpt-3.5-turbo", temperature=0.2, max_tokens=1500
+            )
+            chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
 
             response = chain.run(input_documents=docs, question=user_question)
 
             result["response"] = response  # Agregar la respuesta al resultado
             save_conversation(response, user_id)
         except Exception as e:
-            result = {"error_message": f"An error occurred during the QA process: {e}"}
+            result = {
+                "success": False,
+                "status_code": 500,
+                "message": "Ocurrio un problema al solicitar la respuesta.",
+                "error": e,
+            }
     else:
-        result = {"error_message": "No knowledge base"}
+        result = {
+            "success": False,
+            "status_code": 404,
+            "message": "Sin base de conocimientos actual.",
+            "error": "Knowledge_base is null.",
+        }
 
-    print(json.dumps(result))
-
-else:
-    result = {"error_message": "Insufficient arguments"}
-    print(json.dumps(result))
+    return result
