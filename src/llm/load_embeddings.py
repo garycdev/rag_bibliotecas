@@ -97,7 +97,7 @@ def load(user_question, user_id):
             )
 
             llm = ChatOpenAI(
-                model_name="gpt-3.5-turbo", temperature=0.2, max_tokens=1500
+                model_name="gpt-3.5-turbo", temperature=0.2, max_tokens=250
             )
             chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
 
